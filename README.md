@@ -154,7 +154,7 @@ All responses are typed dataclasses:
 
 - [XposedOrNot Website](https://xposedornot.com)
 - [API Documentation](https://xposedornot.com/api_doc)
-- [GitHub Repository](https://github.com/XposedOrNot/xposedornot-python)
+- [GitHub Repository](https://github.com/XposedOrNot/XposedOrNot-Python)
 
 ## License
 

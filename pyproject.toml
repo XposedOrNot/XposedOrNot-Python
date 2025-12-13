@@ -48,8 +48,8 @@ dev = [
 [project.urls]
 Homepage = "https://xposedornot.com"
 Documentation = "https://xposedornot.com/api_doc"
-Repository = "https://github.com/XposedOrNot/xposedornot-python"
-Issues = "https://github.com/XposedOrNot/xposedornot-python/issues"
+Repository = "https://github.com/XposedOrNot/XposedOrNot-Python"
+Issues = "https://github.com/XposedOrNot/XposedOrNot-Python/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["xposedornot"]
