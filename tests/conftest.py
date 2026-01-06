@@ -113,9 +113,12 @@ SAMPLE_BREACHES_RESPONSE = {
 }
 
 SAMPLE_PASSWORD_RESPONSE = {
-    "anon": "a1b2c3d4e5",
-    "char": {"digits": 3, "alphabets": 8, "special": 0, "length": 11},
-    "count": 12345,
+    "SearchPassAnon": {
+        "anon": "aa77c1b9b7",
+        "char": "D:3;A:8;S:0;L:11",
+        "count": "12345",
+        "wordlist": 0,
+    }
 }
 
 # Plus API (xonPlus) sample responses

@@ -60,7 +60,7 @@ ruff check xposedornot tests
 
 **Rate limiting**: Client-side rate limiting (1 req/sec) only applies to free API (no API key). Plus API users have tier-based limits handled server-side - no client throttling. On 429 errors, the client auto-retries up to 3 times with exponential backoff (1s, 2s, 4s). Commercial plans at https://plus.xposedornot.com/products/api
 
-**Password security (k-anonymity)**: The `check_password()` method never sends passwords over the network. Passwords are hashed locally with SHA3-512, and only the first 10 characters of the hash are sent to `passwords.xposedornot.com`.
+**Password security (k-anonymity)**: The `check_password()` method never sends passwords over the network. Passwords are hashed locally with Keccak-512 (original, not FIPS 202 SHA3-512), and only the first 10 characters of the hash are sent to `passwords.xposedornot.com/api`.
 
 ### Testing
 

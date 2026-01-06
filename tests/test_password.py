@@ -25,12 +25,13 @@ class TestCheckPassword:
     def test_check_password_found(self) -> None:
         """Test checking a password that has been exposed.
 
-        The password is hashed locally - only the hash prefix is sent to the API.
+        The password is hashed locally using Keccak-512 - only the first 10 chars
+        of the hash prefix are sent to the API, never the password itself.
         """
         # Get the hash prefix for "password123" - this is what gets sent, not the password
         hash_prefix = hash_password_keccak512("password123")
 
-        respx.get(f"https://passwords.xposedornot.com/v1/pass/anon/{hash_prefix}").mock(
+        respx.get(f"https://passwords.xposedornot.com/api/v1/pass/anon/{hash_prefix}").mock(
             return_value=Response(200, json=SAMPLE_PASSWORD_RESPONSE)
         )
 
@@ -39,7 +40,7 @@ class TestCheckPassword:
 
         assert isinstance(result, PasswordCheckResponse)
         assert result.count == 12345
-        assert result.anon == "a1b2c3d4e5"
+        assert result.anon == "aa77c1b9b7"
         assert result.characteristics["digits"] == 3
         assert result.characteristics["alphabets"] == 8
 
@@ -48,7 +49,7 @@ class TestCheckPassword:
         """Test checking a password that hasn't been exposed."""
         hash_prefix = hash_password_keccak512("super-unique-password-xyz123!")
 
-        respx.get(f"https://passwords.xposedornot.com/v1/pass/anon/{hash_prefix}").mock(
+        respx.get(f"https://passwords.xposedornot.com/api/v1/pass/anon/{hash_prefix}").mock(
             return_value=Response(404, json={"Error": "Not found"})
         )
 

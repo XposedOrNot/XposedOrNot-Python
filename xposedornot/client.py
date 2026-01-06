@@ -216,7 +216,7 @@ class XposedOrNot:
 
         SECURITY: Your password is NEVER sent over the network.
         This method uses k-anonymity protection:
-        1. The password is hashed locally using SHA3-512 (Keccak)
+        1. The password is hashed locally using Keccak-512
         2. Only the first 10 characters of the hash are sent to the API
         3. The API returns matches for that hash prefix
         4. Your actual password never leaves your machine

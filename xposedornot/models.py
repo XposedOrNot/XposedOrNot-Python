@@ -305,16 +305,37 @@ class PasswordCheckResponse:
     """The hash prefix used for the check."""
 
     characteristics: dict[str, Any]
-    """Password characteristics (digits, alphabets, special chars, length)."""
+    """Password characteristics: digits, alphabets, special chars, length."""
 
     count: int
     """Number of times this password was found in breaches."""
 
     @classmethod
     def from_api_response(cls, data: dict[str, Any]) -> "PasswordCheckResponse":
-        """Create from API response."""
+        """Create from API response.
+
+        API returns: {"SearchPassAnon": {"anon": "...", "char": "D:3;A:8;S:0;L:11", "count": "62703"}}
+        """
+        # Extract nested data from SearchPassAnon
+        pass_data = data.get("SearchPassAnon", {})
+
+        # Parse char string like "D:3;A:8;S:0;L:11" into dict
+        char_str = pass_data.get("char", "")
+        characteristics: dict[str, Any] = {}
+        if char_str:
+            char_map = {"D": "digits", "A": "alphabets", "S": "special", "L": "length"}
+            for part in char_str.split(";"):
+                if ":" in part:
+                    key, value = part.split(":", 1)
+                    if key in char_map:
+                        characteristics[char_map[key]] = int(value)
+
+        # Count is returned as string
+        count_str = pass_data.get("count", "0")
+        count = int(count_str) if count_str else 0
+
         return cls(
-            anon=data.get("anon", ""),
-            characteristics=data.get("char", {}),
-            count=data.get("count", 0),
+            anon=pass_data.get("anon", ""),
+            characteristics=characteristics,
+            count=count,
         )
