@@ -21,7 +21,7 @@ class TestGetBreaches:
             return_value=Response(200, json=SAMPLE_BREACHES_RESPONSE)
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
         result = client.get_breaches()
 
         assert isinstance(result, list)
@@ -53,7 +53,7 @@ class TestGetBreaches:
             params={"domain": "adobe.com"},
         ).mock(return_value=Response(200, json=filtered_response))
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
         result = client.get_breaches(domain="adobe.com")
 
         assert len(result) == 1
@@ -66,7 +66,7 @@ class TestGetBreaches:
             return_value=Response(200, json={"status": "success", "exposedBreaches": []})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
         result = client.get_breaches()
 
         assert result == []

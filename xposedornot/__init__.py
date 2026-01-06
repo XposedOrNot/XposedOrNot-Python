@@ -24,12 +24,14 @@ from .models import (
     Breach,
     BreachAnalyticsResponse,
     BreachDetails,
+    BreachInfo,
     BreachMetrics,
+    EmailBreachDetailedResponse,
     EmailBreachResponse,
     PasswordCheckResponse,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     # Client
@@ -44,6 +46,8 @@ __all__ = [
     "ValidationError",
     # Models
     "EmailBreachResponse",
+    "EmailBreachDetailedResponse",
+    "BreachInfo",
     "BreachAnalyticsResponse",
     "BreachDetails",
     "BreachMetrics",

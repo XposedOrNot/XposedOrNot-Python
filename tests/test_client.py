@@ -24,7 +24,6 @@ class TestClientInitialization:
 
         assert client._base_url == "https://api.xposedornot.com"
         assert client._timeout == 30.0
-        assert client._rate_limit is True
         assert client._api_key is None
 
     def test_custom_initialization(self) -> None:
@@ -33,12 +32,10 @@ class TestClientInitialization:
             api_key="test-key",
             base_url="https://custom.api.com",
             timeout=60.0,
-            rate_limit=False,
         )
 
         assert client._base_url == "https://custom.api.com"
         assert client._timeout == 60.0
-        assert client._rate_limit is False
         assert client._api_key == "test-key"
 
     def test_context_manager(self) -> None:
@@ -51,16 +48,35 @@ class TestErrorHandling:
     """Tests for error handling."""
 
     @respx.mock
-    def test_rate_limit_error(self) -> None:
-        """Test handling of rate limit errors."""
-        respx.get("https://api.xposedornot.com/v1/breaches").mock(
+    def test_rate_limit_error_after_retries(self) -> None:
+        """Test that RateLimitError is raised after all retries exhausted."""
+        route = respx.get("https://api.xposedornot.com/v1/breaches").mock(
             return_value=Response(429, json={"error": "Rate limit exceeded"})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
 
         with pytest.raises(RateLimitError):
             client.get_breaches()
+
+        # Should have retried MAX_RETRIES + 1 times (initial + retries)
+        assert route.call_count == client.MAX_RETRIES + 1
+
+    @respx.mock
+    def test_rate_limit_retry_succeeds(self) -> None:
+        """Test that request succeeds after retry on 429."""
+        # First call returns 429, second call succeeds
+        route = respx.get("https://api.xposedornot.com/v1/breaches")
+        route.side_effect = [
+            Response(429, json={"error": "Rate limit exceeded"}),
+            Response(200, json={"Breaches": []}),
+        ]
+
+        client = XposedOrNot()
+        result = client.get_breaches()
+
+        assert result == []
+        assert route.call_count == 2
 
     @respx.mock
     def test_authentication_error(self) -> None:
@@ -69,7 +85,7 @@ class TestErrorHandling:
             return_value=Response(401, json={"error": "Unauthorized"})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
 
         with pytest.raises(AuthenticationError):
             client.get_breaches()
@@ -81,7 +97,7 @@ class TestErrorHandling:
             return_value=Response(500, json={"error": "Internal server error"})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
 
         with pytest.raises(ServerError) as exc_info:
             client.get_breaches()
@@ -95,7 +111,7 @@ class TestErrorHandling:
             return_value=Response(400, text="Bad request")
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
 
         with pytest.raises(APIError) as exc_info:
             client.get_breaches()
@@ -113,7 +129,7 @@ class TestAPIKeyHandling:
             return_value=Response(200, json={"Breaches": []})
         )
 
-        client = XposedOrNot(api_key="my-secret-key", rate_limit=False)
+        client = XposedOrNot(api_key="my-secret-key")
         client.get_breaches()
 
         assert route.called
@@ -127,7 +143,7 @@ class TestAPIKeyHandling:
             return_value=Response(200, json={"Breaches": []})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
         client.get_breaches()
 
         assert route.called

@@ -8,7 +8,11 @@ from typing import Any
 
 @dataclass
 class EmailBreachResponse:
-    """Response from the check-email endpoint."""
+    """Response from the free check-email endpoint.
+
+    Returns only breach names. For detailed breach information,
+    use the Plus API by providing an API key.
+    """
 
     breaches: list[str]
     """List of breach names where the email was found."""
@@ -18,6 +22,84 @@ class EmailBreachResponse:
         """Create from API response."""
         # API returns {"breaches": ["breach1", "breach2"]} on success
         return cls(breaches=data.get("breaches", []))
+
+
+@dataclass
+class BreachInfo:
+    """Detailed information about a single breach from the Plus API."""
+
+    breach_id: str
+    """Unique identifier for the breach."""
+
+    breached_date: str
+    """Date when the breach occurred."""
+
+    logo: str
+    """URL to the organization's logo."""
+
+    password_risk: str
+    """Risk level of password exposure (e.g., 'hardtocrack', 'easytocrack')."""
+
+    searchable: str
+    """Whether the breach is searchable ('Yes'/'No')."""
+
+    xposed_data: str
+    """Types of data exposed (e.g., 'Email addresses;Usernames;Passwords')."""
+
+    xposed_records: int
+    """Number of records exposed in the breach."""
+
+    xposure_desc: str
+    """Description of the breach incident."""
+
+    domain: str
+    """Domain of the breached organization."""
+
+    seniority: str | None = None
+    """Seniority information if available."""
+
+
+@dataclass
+class EmailBreachDetailedResponse:
+    """Response from the Plus API check-email endpoint.
+
+    Requires an API key from console.xposedornot.com.
+    Returns detailed breach information including logos, risk levels, and descriptions.
+    """
+
+    status: str
+    """Response status ('success' or 'error')."""
+
+    email: str
+    """The email address that was checked."""
+
+    breaches: list[BreachInfo]
+    """List of detailed breach information."""
+
+    @classmethod
+    def from_api_response(cls, data: dict[str, Any]) -> "EmailBreachDetailedResponse":
+        """Create from Plus API response."""
+        breaches = []
+        for b in data.get("breaches", []):
+            breaches.append(
+                BreachInfo(
+                    breach_id=b.get("breach_id", ""),
+                    breached_date=b.get("breached_date", ""),
+                    logo=b.get("logo", ""),
+                    password_risk=b.get("password_risk", ""),
+                    searchable=b.get("searchable", ""),
+                    xposed_data=b.get("xposed_data", ""),
+                    xposed_records=b.get("xposed_records", 0),
+                    xposure_desc=b.get("xposure_desc", ""),
+                    domain=b.get("domain", ""),
+                    seniority=b.get("seniority"),
+                )
+            )
+        return cls(
+            status=data.get("status", ""),
+            email=data.get("email", ""),
+            breaches=breaches,
+        )
 
 
 @dataclass

@@ -14,19 +14,27 @@ from .conftest import SAMPLE_PASSWORD_RESPONSE
 
 
 class TestCheckPassword:
-    """Tests for the check_password endpoint."""
+    """Tests for the check_password endpoint.
+
+    Note: The password is NEVER sent to the API. It is hashed locally
+    using SHA3-512 (Keccak), and only the first 10 characters of the
+    hash are sent for k-anonymity lookup.
+    """
 
     @respx.mock
     def test_check_password_found(self) -> None:
-        """Test checking a password that has been exposed."""
-        # Get the hash prefix for "password123"
+        """Test checking a password that has been exposed.
+
+        The password is hashed locally - only the hash prefix is sent to the API.
+        """
+        # Get the hash prefix for "password123" - this is what gets sent, not the password
         hash_prefix = hash_password_keccak512("password123")
 
         respx.get(f"https://passwords.xposedornot.com/v1/pass/anon/{hash_prefix}").mock(
             return_value=Response(200, json=SAMPLE_PASSWORD_RESPONSE)
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
         result = client.check_password("password123")
 
         assert isinstance(result, PasswordCheckResponse)
@@ -44,7 +52,7 @@ class TestCheckPassword:
             return_value=Response(404, json={"Error": "Not found"})
         )
 
-        client = XposedOrNot(rate_limit=False)
+        client = XposedOrNot()
 
         with pytest.raises(NotFoundError):
             client.check_password("super-unique-password-xyz123!")
