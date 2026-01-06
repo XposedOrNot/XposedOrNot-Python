@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Guidelines
+
+- **Never make git commits directly** - Always provide the commit message for the user to review and commit themselves
+
 ## Project Overview
 
 This is the official Python client library for the XposedOrNot API - a service for checking if emails or passwords have been exposed in data breaches. The package is published to PyPI as `xposedornot`.
