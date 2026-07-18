@@ -17,11 +17,31 @@ class EmailBreachResponse:
     breaches: list[str]
     """List of breach names where the email was found."""
 
+    email: str = ""
+    """The email address that was checked."""
+
+    status: str = ""
+    """Response status ('success' or 'error')."""
+
     @classmethod
     def from_api_response(cls, data: dict[str, Any]) -> "EmailBreachResponse":
-        """Create from API response."""
-        # API returns {"breaches": ["breach1", "breach2"]} on success
-        return cls(breaches=data.get("breaches", []))
+        """Create from API response.
+
+        API returns {"breaches": [["breach1", "breach2"]], "email": "...", "status": "..."}
+        where breaches is a nested list. Older responses may use a flat list.
+        """
+        breaches_raw = data.get("breaches", [])
+        breaches: list[str] = []
+        for item in breaches_raw:
+            if isinstance(item, list):
+                breaches.extend(item)
+            else:
+                breaches.append(item)
+        return cls(
+            breaches=breaches,
+            email=data.get("email", ""),
+            status=data.get("status", ""),
+        )
 
 
 @dataclass
@@ -179,6 +199,9 @@ class BreachAnalyticsResponse:
     breaches_count: int = 0
     """Total number of breaches."""
 
+    breach_names: list[str] = field(default_factory=list)
+    """Names of breaches the email was found in."""
+
     first_breach: str = ""
     """Date of first breach."""
 
@@ -220,11 +243,21 @@ class BreachAnalyticsResponse:
             yearwise_details=breach_metrics_raw.get("yearwise_details", []),
         )
 
+        # The API returns "site" as a semicolon-separated string of breach names
+        site = breaches_summary.get("site", "")
+        if isinstance(site, str):
+            breach_names = [name for name in site.split(";") if name]
+            breaches_count = len(breach_names)
+        else:
+            breach_names = []
+            breaches_count = site
+
         return cls(
             breaches_details=breaches_details,
             metrics=metrics,
-            exposures_count=breaches_summary.get("exposures", 0),
-            breaches_count=breaches_summary.get("site", 0),
+            exposures_count=breaches_summary.get("exposures", len(breaches_details)),
+            breaches_count=breaches_count,
+            breach_names=breach_names,
             first_breach=breaches_summary.get("first_breach", ""),
             pastes_count=data.get("PastesSummary", {}).get("cnt", 0),
         )
@@ -338,4 +371,73 @@ class PasswordCheckResponse:
             anon=pass_data.get("anon", ""),
             characteristics=characteristics,
             count=count,
+        )
+
+
+@dataclass
+class DomainBreachDetail:
+    """A single exposed email record from the domain-breaches endpoint."""
+
+    email: str
+    """Email address exposed in the breach."""
+
+    domain: str
+    """Verified domain the email belongs to."""
+
+    breach: str
+    """Name of the breach the email was found in."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "DomainBreachDetail":
+        """Create from API response dict."""
+        return cls(
+            email=data.get("email", ""),
+            domain=data.get("domain", ""),
+            breach=data.get("breach", ""),
+        )
+
+
+@dataclass
+class DomainBreachesResponse:
+    """Response from the domain-breaches endpoint.
+
+    Contains breach metrics and statistics for domains verified
+    against the API key.
+    """
+
+    status: str = ""
+    """Response status ('success' or 'error')."""
+
+    breaches_details: list[DomainBreachDetail] = field(default_factory=list)
+    """Exposed email records across the verified domains."""
+
+    yearly_metrics: dict[str, Any] = field(default_factory=dict)
+    """Breach counts by year."""
+
+    domain_summary: dict[str, Any] = field(default_factory=dict)
+    """Summary of breaches by domain."""
+
+    breach_summary: dict[str, Any] = field(default_factory=dict)
+    """Summary of all breaches."""
+
+    top10_breaches: dict[str, Any] = field(default_factory=dict)
+    """Top 10 largest breaches affecting the domains."""
+
+    detailed_breach_info: dict[str, Any] = field(default_factory=dict)
+    """Detailed information about each breach."""
+
+    @classmethod
+    def from_api_response(cls, data: dict[str, Any]) -> "DomainBreachesResponse":
+        """Create from API response."""
+        metrics = data.get("metrics", {})
+        return cls(
+            status=data.get("status", ""),
+            breaches_details=[
+                DomainBreachDetail.from_dict(b) for b in metrics.get("Breaches_Details", [])
+            ],
+            yearly_metrics=metrics.get("Yearly_Metrics", {}),
+            domain_summary=metrics.get("Domain_Summary", {}),
+            breach_summary=metrics.get("Breach_Summary", {}),
+            top10_breaches=metrics.get("Top10_Breaches", {}),
+            detailed_breach_info=metrics.get("Detailed_Breach_Info", {}),
         )

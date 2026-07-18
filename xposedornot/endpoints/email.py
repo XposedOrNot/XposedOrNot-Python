@@ -20,7 +20,9 @@ class EmailEndpoint:
     def __init__(self, client: "XposedOrNot"):
         self._client = client
 
-    def check(self, email: str) -> EmailBreachResponse | EmailBreachDetailedResponse:
+    def check(
+        self, email: str, include_details: bool = False
+    ) -> EmailBreachResponse | EmailBreachDetailedResponse:
         """Check if an email has been exposed in data breaches.
 
         When an API key is configured, uses the Plus API (plus-api.xposedornot.com)
@@ -29,6 +31,9 @@ class EmailEndpoint:
 
         Args:
             email: The email address to check.
+            include_details: Request detailed breach information from the
+                free API. Ignored when an API key is set (the Plus API is
+                always queried with detailed=true).
 
         Returns:
             EmailBreachDetailedResponse if API key is set (Plus API),
@@ -54,14 +59,16 @@ class EmailEndpoint:
             return EmailBreachDetailedResponse.from_api_response(data)
         else:
             # Use free API for unauthenticated requests
-            data = self._client._request("GET", f"/v1/check-email/{email}")
+            params = {"include_details": "true"} if include_details else None
+            data = self._client._request("GET", f"/v1/check-email/{email}", params=params)
             return EmailBreachResponse.from_api_response(data)
 
-    def analytics(self, email: str) -> BreachAnalyticsResponse:
+    def analytics(self, email: str, token: str | None = None) -> BreachAnalyticsResponse:
         """Get detailed breach analytics for an email.
 
         Args:
             email: The email address to analyze.
+            token: Optional token for accessing sensitive breach data.
 
         Returns:
             BreachAnalyticsResponse containing detailed breach information
@@ -75,5 +82,9 @@ class EmailEndpoint:
         if not validate_email(email):
             raise ValidationError(f"Invalid email format: {email}")
 
-        data = self._client._request("GET", "/v1/breach-analytics", params={"email": email})
+        params = {"email": email}
+        if token:
+            params["token"] = token
+
+        data = self._client._request("GET", "/v1/breach-analytics", params=params)
         return BreachAnalyticsResponse.from_api_response(data)

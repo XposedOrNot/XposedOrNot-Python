@@ -18,6 +18,7 @@ from .exceptions import (
 from .models import (
     Breach,
     BreachAnalyticsResponse,
+    DomainBreachesResponse,
     EmailBreachDetailedResponse,
     EmailBreachResponse,
     PasswordCheckResponse,
@@ -144,7 +145,7 @@ class XposedOrNot:
                     last_exception = RateLimitError()
                     if attempt < self.MAX_RETRIES:
                         # Exponential backoff: 1s, 2s, 4s
-                        delay = self.RETRY_BASE_DELAY * (2 ** attempt)
+                        delay = self.RETRY_BASE_DELAY * (2**attempt)
                         time.sleep(delay)
                         continue
                     raise last_exception
@@ -173,7 +174,9 @@ class XposedOrNot:
 
     # Convenience methods that delegate to endpoint handlers
 
-    def check_email(self, email: str) -> EmailBreachResponse | EmailBreachDetailedResponse:
+    def check_email(
+        self, email: str, include_details: bool = False
+    ) -> EmailBreachResponse | EmailBreachDetailedResponse:
         """Check if an email has been exposed in data breaches.
 
         When an API key is configured, uses the Plus API (plus-api.xposedornot.com)
@@ -182,34 +185,53 @@ class XposedOrNot:
 
         Args:
             email: The email address to check.
+            include_details: Request detailed breach information from the
+                free API. Ignored when an API key is set (the Plus API is
+                always queried with detailed=true).
 
         Returns:
             EmailBreachDetailedResponse if API key is set (Plus API),
             EmailBreachResponse if no API key (free API).
         """
-        return self._email.check(email)
+        return self._email.check(email, include_details=include_details)
 
-    def breach_analytics(self, email: str) -> BreachAnalyticsResponse:
+    def breach_analytics(self, email: str, token: str | None = None) -> BreachAnalyticsResponse:
         """Get detailed breach analytics for an email.
 
         Args:
             email: The email address to analyze.
+            token: Optional token for accessing sensitive breach data.
 
         Returns:
             BreachAnalyticsResponse with detailed breach information.
         """
-        return self._email.analytics(email)
+        return self._email.analytics(email, token=token)
 
-    def get_breaches(self, domain: str | None = None) -> list[Breach]:
+    def get_breaches(self, domain: str | None = None, breach_id: str | None = None) -> list[Breach]:
         """Get a list of all known data breaches.
 
         Args:
             domain: Optional domain to filter breaches by.
+            breach_id: Optional breach ID to fetch a specific breach.
 
         Returns:
             List of Breach objects.
         """
-        return self._breaches.list(domain=domain)
+        return self._breaches.list(domain=domain, breach_id=breach_id)
+
+    def get_domain_breaches(self) -> DomainBreachesResponse:
+        """Get breach information for domains verified against the API key.
+
+        Requires an API key with verified domains configured at
+        console.xposedornot.com.
+
+        Returns:
+            DomainBreachesResponse with metrics and exposed email records.
+
+        Raises:
+            AuthenticationError: If no API key is configured or the key is invalid.
+        """
+        return self._breaches.domain_breaches()
 
     def check_password(self, password: str) -> PasswordCheckResponse:
         """Check if a password has been exposed in data breaches.

@@ -37,16 +37,18 @@ def mock_plus_api() -> respx.MockRouter:
 
 
 # Sample API responses for testing
-SAMPLE_CHECK_EMAIL_RESPONSE = {"breaches": ["Adobe", "LinkedIn", "Dropbox"]}
+# The free API returns breaches as a nested list
+SAMPLE_CHECK_EMAIL_RESPONSE = {
+    "breaches": [["Adobe", "LinkedIn", "Dropbox"]],
+    "email": "test@example.com",
+    "status": "success",
+}
 
 SAMPLE_CHECK_EMAIL_NOT_FOUND = {"Error": "Not found"}
 
 SAMPLE_BREACH_ANALYTICS_RESPONSE = {
-    "BreachesSummary": {
-        "exposures": 5,
-        "site": 3,
-        "first_breach": "2013-10-04",
-    },
+    # The API returns "site" as a semicolon-separated string of breach names
+    "BreachesSummary": {"site": "Adobe;LinkedIn;Dropbox"},
     "ExposedBreaches": {
         "breaches_details": [
             {
@@ -109,7 +111,7 @@ SAMPLE_BREACHES_RESPONSE = {
             "sensitive": False,
             "verified": True,
         },
-    ]
+    ],
 }
 
 SAMPLE_PASSWORD_RESPONSE = {
@@ -157,10 +159,23 @@ SAMPLE_PLUS_CHECK_EMAIL_NOT_FOUND = {
     "detail": {"status": "error", "message": "Email not found in any breaches"}
 }
 
-SAMPLE_PLUS_INVALID_API_KEY = {
-    "detail": {"status": "error", "message": "Invalid API key"}
-}
+SAMPLE_PLUS_INVALID_API_KEY = {"detail": {"status": "error", "message": "Invalid API key"}}
 
-SAMPLE_PLUS_INVALID_EMAIL = {
-    "detail": {"status": "error", "message": "Invalid email format"}
+SAMPLE_PLUS_INVALID_EMAIL = {"detail": {"status": "error", "message": "Invalid email format"}}
+
+SAMPLE_DOMAIN_BREACHES_RESPONSE = {
+    "status": "success",
+    "metrics": {
+        "Yearly_Metrics": {"2013": 1, "2012": 1},
+        "Domain_Summary": {"example.com": 2},
+        "Breach_Summary": {"Adobe": 1, "LinkedIn": 1},
+        "Breaches_Details": [
+            {"email": "alice@example.com", "domain": "example.com", "breach": "Adobe"},
+            {"email": "bob@example.com", "domain": "example.com", "breach": "LinkedIn"},
+        ],
+        "Top10_Breaches": {"Adobe": 152000000, "LinkedIn": 164000000},
+        "Detailed_Breach_Info": {
+            "Adobe": {"breached_date": "2013-10-04", "domain": "adobe.com"},
+        },
+    },
 }

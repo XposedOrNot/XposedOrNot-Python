@@ -104,12 +104,12 @@ with XposedOrNot() as xon:
 
 ### Methods
 
-#### `check_email(email: str) -> EmailBreachResponse | EmailBreachDetailedResponse`
+#### `check_email(email: str, include_details: bool = False) -> EmailBreachResponse | EmailBreachDetailedResponse`
 
 Check if an email has been exposed in data breaches.
 
-- **Without API key**: Uses free API, returns `EmailBreachResponse` with breach names only
-- **With API key**: Uses Plus API (`plus-api.xposedornot.com`), returns `EmailBreachDetailedResponse` with full breach details
+- **Without API key**: Uses free API, returns `EmailBreachResponse` with breach names only. Pass `include_details=True` to request detailed breach information.
+- **With API key**: Uses Plus API (`plus-api.xposedornot.com`), returns `EmailBreachDetailedResponse` with full breach details (`include_details` is ignored - the Plus API is always queried with detailed results)
 
 ```python
 # Free API (no key)
@@ -124,22 +124,21 @@ print(result.breaches[0].breach_id)    # 'Adobe'
 print(result.breaches[0].xposed_records)  # 152000000
 ```
 
-#### `breach_analytics(email: str) -> BreachAnalyticsResponse`
+#### `breach_analytics(email: str, token: str = None) -> BreachAnalyticsResponse`
 
-Get detailed breach analytics for an email.
+Get detailed breach analytics for an email. Pass `token` to access sensitive breach data.
 
 ```python
 analytics = xon.breach_analytics("test@example.com")
-print(analytics.exposures_count)      # Total exposures
 print(analytics.breaches_count)       # Number of breaches
-print(analytics.first_breach)         # Date of first breach
+print(analytics.breach_names)         # Names of breaches the email was found in
 print(analytics.breaches_details)     # List of BreachDetails
 print(analytics.metrics)              # BreachMetrics with industry, risk, etc.
 ```
 
-#### `get_breaches(domain: str = None) -> list[Breach]`
+#### `get_breaches(domain: str = None, breach_id: str = None) -> list[Breach]`
 
-Get all known breaches, optionally filtered by domain.
+Get all known breaches, optionally filtered by domain or breach ID.
 
 ```python
 # All breaches
@@ -147,6 +146,23 @@ all_breaches = xon.get_breaches()
 
 # Filter by domain
 adobe = xon.get_breaches(domain="adobe.com")
+
+# Fetch a specific breach by ID
+adobe = xon.get_breaches(breach_id="Adobe")
+```
+
+#### `get_domain_breaches() -> DomainBreachesResponse`
+
+Get breach information for domains verified against your API key (requires an API key with verified domains configured at [console.xposedornot.com](https://console.xposedornot.com)).
+
+```python
+xon = XposedOrNot(api_key="your-key")
+report = xon.get_domain_breaches()
+print(report.domain_summary)     # Breach counts per domain
+print(report.yearly_metrics)     # Breach counts by year
+print(report.top10_breaches)     # Top 10 largest breaches
+for record in report.breaches_details:
+    print(record.email, record.domain, record.breach)
 ```
 
 #### `check_password(password: str) -> PasswordCheckResponse`

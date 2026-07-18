@@ -7,7 +7,11 @@ import respx
 from httpx import Response
 
 from xposedornot import XposedOrNot, NotFoundError, ValidationError, AuthenticationError
-from xposedornot.models import EmailBreachResponse, EmailBreachDetailedResponse, BreachAnalyticsResponse
+from xposedornot.models import (
+    EmailBreachResponse,
+    EmailBreachDetailedResponse,
+    BreachAnalyticsResponse,
+)
 
 from .conftest import (
     SAMPLE_CHECK_EMAIL_RESPONSE,
@@ -33,6 +37,35 @@ class TestCheckEmail:
         assert isinstance(result, EmailBreachResponse)
         assert result.breaches == ["Adobe", "LinkedIn", "Dropbox"]
         assert len(result.breaches) == 3
+
+    @respx.mock
+    def test_check_email_include_details(self) -> None:
+        """Test that include_details=True is passed to the free API."""
+        route = respx.get(
+            "https://api.xposedornot.com/v1/check-email/test@example.com",
+            params={"include_details": "true"},
+        ).mock(return_value=Response(200, json=SAMPLE_CHECK_EMAIL_RESPONSE))
+
+        client = XposedOrNot()
+        result = client.check_email("test@example.com", include_details=True)
+
+        assert route.called
+        assert isinstance(result, EmailBreachResponse)
+        assert result.breaches == ["Adobe", "LinkedIn", "Dropbox"]
+        assert result.email == "test@example.com"
+        assert result.status == "success"
+
+    @respx.mock
+    def test_check_email_flat_breaches_list(self) -> None:
+        """Test that a flat (non-nested) breaches list is also parsed."""
+        respx.get("https://api.xposedornot.com/v1/check-email/test@example.com").mock(
+            return_value=Response(200, json={"breaches": ["Adobe", "LinkedIn"]})
+        )
+
+        client = XposedOrNot()
+        result = client.check_email("test@example.com")
+
+        assert result.breaches == ["Adobe", "LinkedIn"]
 
     @respx.mock
     def test_check_email_not_found(self) -> None:
@@ -78,9 +111,9 @@ class TestBreachAnalytics:
         result = client.breach_analytics("test@example.com")
 
         assert isinstance(result, BreachAnalyticsResponse)
-        assert result.exposures_count == 5
         assert result.breaches_count == 3
-        assert result.first_breach == "2013-10-04"
+        assert result.breach_names == ["Adobe", "LinkedIn", "Dropbox"]
+        assert result.exposures_count == 1
         assert result.pastes_count == 2
         assert len(result.breaches_details) == 1
 
@@ -94,6 +127,20 @@ class TestBreachAnalytics:
         # Check metrics
         assert result.metrics is not None
         assert len(result.metrics.industry) == 1
+
+    @respx.mock
+    def test_breach_analytics_with_token(self) -> None:
+        """Test that the optional token param is sent."""
+        route = respx.get(
+            "https://api.xposedornot.com/v1/breach-analytics",
+            params={"email": "test@example.com", "token": "sensitive-token"},
+        ).mock(return_value=Response(200, json=SAMPLE_BREACH_ANALYTICS_RESPONSE))
+
+        client = XposedOrNot()
+        result = client.breach_analytics("test@example.com", token="sensitive-token")
+
+        assert route.called
+        assert isinstance(result, BreachAnalyticsResponse)
 
     @respx.mock
     def test_breach_analytics_not_found(self) -> None:
@@ -184,7 +231,9 @@ class TestCheckEmailPlus:
         respx.get(
             "https://plus-api.xposedornot.com/v3/check-email/clean@example.com",
             params={"detailed": "true"},
-        ).mock(return_value=Response(404, json={"detail": {"status": "error", "message": "Not found"}}))
+        ).mock(
+            return_value=Response(404, json={"detail": {"status": "error", "message": "Not found"}})
+        )
 
         client = XposedOrNot(api_key="test-api-key")
 
